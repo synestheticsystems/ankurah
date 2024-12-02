@@ -87,9 +87,10 @@ impl Node {
             let record = self.fetch_record(record_event.id(), record_event.bucket_name())?;
             record.apply_record_event(record_event)?;
 
+            let record_state = record.to_record_state()?;
             // Push the state buffers to storage.
             self.bucket(record_event.bucket_name())
-                .set_record_state(record_event.id(), &record.to_record_state())?;
+                .set_record_state(record_event.id(), &record_state)?;
 
             // TODO: Push the record events to subscribed peers.
         }
@@ -176,7 +177,7 @@ impl Node {
         let scoped_record = self.fetch_record_from_storage(id, bucket_name)?;
         let ref_record = Arc::new(scoped_record);
         let already_present = self.add_record(&ref_record);
-        if already_present { 
+        if already_present {
             // We hit a small edge case where the record was fetched twice
             // at the same time and the other fetch added the record first.
             // So try this function again.

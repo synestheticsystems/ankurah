@@ -5,14 +5,16 @@ use std::{any::Any, fmt, sync::Arc};
 use crate::{
     error::RetrievalError,
     property::{backend::RecordEvent, Backends},
-    storage::RecordState, transaction::Transaction,
+    storage::RecordState,
+    transaction::Transaction,
 };
 
 use anyhow::Result;
 
+use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Ord, PartialOrd)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct ID(pub Ulid);
 
 impl fmt::Display for ID {
@@ -50,7 +52,10 @@ pub trait Record {
     type ScopedRecord: ScopedRecord;
     fn id(&self) -> ID;
     fn to_model(&self) -> Self::Model;
-    fn edit<'rec, 'trx: 'rec>(&self, trx: &'trx Transaction) -> Result<&'rec Self::ScopedRecord, RetrievalError>;
+    fn edit<'rec, 'trx: 'rec>(
+        &self,
+        trx: &'trx Transaction,
+    ) -> Result<&'rec Self::ScopedRecord, RetrievalError>;
     //fn property(property_name: &'static str) -> Box<dyn Any>;
 }
 
@@ -83,20 +88,16 @@ impl ErasedRecord {
         self.bucket_name
     }
 
-    pub fn to_record_state(&self) -> RecordState {
-        RecordState::from_backends(&self.backends)
-    }
-
-    pub fn from_backends(
-        id: ID,
-        bucket_name: &'static str,
-        backends: Backends,
-    ) -> Self {
+    pub fn from_backends(id: ID, bucket_name: &'static str, backends: Backends) -> Self {
         Self {
             id: id,
             bucket_name: bucket_name,
             backends: backends,
         }
+    }
+
+    pub fn to_record_state(&self) -> Result<RecordState> {
+        RecordState::from_backends(&self.backends)
     }
 
     pub fn from_record_state(
@@ -110,7 +111,8 @@ impl ErasedRecord {
 
     pub fn apply_record_event(&self, event: &RecordEvent) -> Result<()> {
         for (backend_name, operations) in &event.operations {
-            self.backends.apply_operation(backend_name, operations)?;
+            self.backends
+                .apply_operations((*backend_name).to_owned(), operations)?;
         }
 
         Ok(())
@@ -128,17 +130,13 @@ pub trait ScopedRecord: Any + Send + Sync + 'static {
     fn backends(&self) -> &Backends;
 
     fn to_erased_record(&self) -> ErasedRecord {
-        ErasedRecord::from_backends(
-            self.id(),
-            self.bucket_name(), 
-            self.backends().duplicate()
-        )
+        ErasedRecord::from_backends(self.id(), self.bucket_name(), self.backends().duplicate())
     }
     fn from_backends(id: ID, backends: Backends) -> Self
     where
         Self: Sized;
 
-    fn record_state(&self) -> RecordState;
+    fn record_state(&self) -> anyhow::Result<RecordState>;
     fn from_record_state(id: ID, record_state: &RecordState) -> Result<Self, RetrievalError>
     where
         Self: Sized;
