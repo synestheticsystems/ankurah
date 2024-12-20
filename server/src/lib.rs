@@ -1,3 +1,5 @@
+//! Example "server" Ankurah Node with a websocket connector
+
 pub mod error;
 pub(crate) mod server;
 pub(crate) mod state;
