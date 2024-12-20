@@ -66,7 +66,6 @@ pub struct Client {
 impl Client {
     #[wasm_bindgen(constructor)]
     pub fn new(server_url: &str) -> Result<Client, JsValue> {
-        let _ = any_spawner::Executor::init_wasm_bindgen();
         let inner = Rc::new(ClientInner {
             server_url: server_url.to_string(),
             connection: RefCell::new(None),

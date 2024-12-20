@@ -19,9 +19,8 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // }
     // initializing = true;
     init_bindings().then(async () => {
-      const newClient = bindings.Client.new();
-
-      // await newClient.ready();
+      const newClient = bindings.create_client();
+      await newClient.ready();
       setAppState({ client: newClient });
     });
   }, []);
