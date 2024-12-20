@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use ulid::Ulid;
+
+// TODO - split out the different id types. Presently there's a lot of not-records that are using this type for their ID
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct ID(pub Ulid);
 
