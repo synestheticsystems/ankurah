@@ -1,14 +1,17 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
+use ankurah_proto::{ID, RecordState};
+use anyhow::Result;
+use async_trait::async_trait;
 
 use crate::{
-    model::{RecordInner, ID},
-    storage::{RecordState, StorageBucket, StorageEngine},
+    model::RecordInner,
+    storage::{StorageBucket, StorageEngine},
+    error::RetrievalError,
 };
 
 use ankql::selection::filter::evaluate_predicate;
-use async_trait::async_trait;
 use sled::{Config, Db};
 use tokio::task;
 
@@ -127,7 +130,7 @@ impl StorageBucket for SledStorageBucket {
         .await?
     }
 
-    async fn get_record(&self, id: ID) -> Result<RecordState, crate::error::RetrievalError> {
+    async fn get_record(&self, id: ID) -> Result<RecordState, RetrievalError> {
         let tree = self.tree.clone();
         let id_bytes = id.0.to_bytes();
 
@@ -136,14 +139,14 @@ impl StorageBucket for SledStorageBucket {
             tree.get(id_bytes)
         })
         .await
-        .map_err(|e| crate::error::RetrievalError::StorageError(Box::new(e)))?;
+        .map_err(|e| RetrievalError::StorageError(Box::new(e)))?;
 
         match result? {
             Some(ivec) => {
                 let record_state = bincode::deserialize(&ivec)?;
                 Ok(record_state)
             }
-            None => Err(crate::error::RetrievalError::NotFound(id)),
+            None => Err(RetrievalError::NotFound(id)),
         }
     }
 }

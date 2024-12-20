@@ -1,4 +1,4 @@
-use crate::model::ID;
+use ankurah_proto::ID;
 use thiserror::Error;
 
 #[derive(Error, Debug)]

@@ -1,8 +1,9 @@
+use ankurah_proto::ID;
 use std::sync::Arc;
 
 use crate::{
     error::RetrievalError,
-    model::{RecordInner, ScopedRecord, ID},
+    model::{RecordInner, ScopedRecord},
     Model, Node,
 };
 

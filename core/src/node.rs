@@ -1,60 +1,22 @@
-use ulid::Ulid;
-
-use crate::{
-    error::RetrievalError,
-    event::Operation,
-    model::{Record, RecordInner, ID},
-    property::backend::RecordEvent,
-    resultset::ResultSet,
-    storage::{Bucket, RecordState, StorageEngine},
-    transaction::Transaction,
+use ankurah_proto::{
+    NodeId, NodeRequest, NodeRequestBody, NodeResponse, NodeResponseBody, PeerMessage, RecordEvent,
+    RecordState, RequestId, ID,
 };
+use anyhow::Result;
 use std::{
     collections::{btree_map::Entry, BTreeMap},
     sync::{Arc, RwLock, Weak},
 };
 use tokio::sync::{mpsc, oneshot};
+use ulid::Ulid;
 
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub struct NodeId(Ulid);
-
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub struct RequestId(Ulid);
-
-#[derive(Debug)]
-pub struct NodeRequest {
-    id: RequestId,
-    to: NodeId,
-    from: NodeId,
-    body: NodeRequestBody,
-}
-
-#[derive(Debug)]
-pub struct NodeResponse {
-    request_id: RequestId,
-    from: NodeId,
-    to: NodeId,
-    result: anyhow::Result<NodeResponseBody>,
-}
-
-#[derive(Debug)]
-enum NodeRequestBody {
-    // Events to be committed on the remote node
-    CommitEvents(Vec<RecordEvent>),
-    // Request to fetch records matching a predicate
-    FetchRecords {
-        bucket_name: &'static str,
-        predicate: String,
-    },
-}
-
-#[derive(Debug)]
-enum NodeResponseBody {
-    // Response to CommitEvents
-    CommitComplete(anyhow::Result<()>),
-    // Response to FetchRecords
-    Records(anyhow::Result<Vec<RecordState>>),
-}
+use crate::{
+    error::RetrievalError,
+    model::{Record, RecordInner},
+    resultset::ResultSet,
+    storage::{Bucket, StorageEngine},
+    transaction::Transaction,
+};
 
 /// Manager for all records and their properties on this client.
 pub struct Node {
@@ -79,12 +41,6 @@ pub struct Node {
 
 type NodeRecords = BTreeMap<(ID, &'static str), Weak<RecordInner>>;
 
-#[derive(Debug)]
-enum PeerMessage {
-    Request(NodeRequest),
-    Response(NodeResponse),
-}
-
 #[derive(Clone)]
 pub enum PeerConnection {
     Local(mpsc::Sender<PeerMessage>),
@@ -93,7 +49,7 @@ pub enum PeerConnection {
 impl Node {
     pub fn new(engine: Box<dyn StorageEngine>) -> Self {
         Self {
-            id: NodeId(Ulid::new()),
+            id: NodeId::new(),
             storage_engine: engine,
             collections: RwLock::new(BTreeMap::new()),
             records: Arc::new(RwLock::new(BTreeMap::new())),
@@ -173,7 +129,7 @@ impl Node {
     ) -> anyhow::Result<NodeResponseBody> {
         let (response_tx, response_rx) =
             oneshot::channel::<Result<NodeResponseBody, anyhow::Error>>();
-        let request_id = RequestId(Ulid::new());
+        let request_id = RequestId::new();
 
         // Store the response channel
         self.pending_requests
@@ -273,7 +229,7 @@ impl Node {
         for record_event in events {
             // Apply record events to the Node's global records first.
             let record = self
-                .fetch_record_inner(record_event.id(), record_event.bucket_name())
+                .fetch_record_inner(record_event.id, record_event.bucket_name)
                 .await?;
 
             record.apply_record_event(record_event)?;

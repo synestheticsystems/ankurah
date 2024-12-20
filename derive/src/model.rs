@@ -63,7 +63,7 @@ pub fn derive_model_impl(input: TokenStream) -> TokenStream {
             fn bucket_name() -> &'static str {
                 #name_str
             }
-            fn to_record_inner(&self, id: ankurah_core::ID) -> ankurah_core::model::RecordInner {
+            fn to_record_inner(&self, id: ankurah_proto::ID) -> ankurah_core::model::RecordInner {
                 use ankurah_core::property::InitializeWith;
 
                 let backends = ankurah_core::property::Backends::new();
@@ -161,14 +161,14 @@ pub fn derive_model_impl(input: TokenStream) -> TokenStream {
             )*
         }
 
-        impl<'a> Into<ankurah_core::ID> for &'a #record_name {
-            fn into(self) -> ankurah_core::ID {
+        impl<'a> Into<ankurah_proto::ID> for &'a #record_name {
+            fn into(self) -> ankurah_proto::ID {
                 ankurah_core::model::Record::id(self)
             }
         }
 
-        impl<'a, 'rec> Into<ankurah_core::ID> for &'a #scoped_record_name<'rec> {
-            fn into(self) -> ankurah_core::ID {
+        impl<'a, 'rec> Into<ankurah_proto::ID> for &'a #scoped_record_name<'rec> {
+            fn into(self) -> ankurah_proto::ID {
                 ankurah_core::model::ScopedRecord::id(self)
             }
         }

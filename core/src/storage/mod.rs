@@ -3,11 +3,8 @@ use std::{collections::BTreeMap, sync::Arc};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    error::RetrievalError,
-    model::{Record, ID},
-    property::Backends,
-};
+use crate::{error::RetrievalError, model::Record, property::Backends};
+use ankurah_proto::{RecordState, ID};
 
 #[cfg(feature = "postgres")]
 mod postgres;
@@ -55,17 +52,6 @@ pub enum MaterializedTag {
 pub enum Materialized {
     String(String),
     Number(i64),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RecordState {
-    pub state_buffers: BTreeMap<String, Vec<u8>>,
-}
-
-impl RecordState {
-    pub fn from_backends(backends: &Backends) -> anyhow::Result<Self> {
-        backends.to_state_buffers()
-    }
 }
 
 /// Manages the storage and state of the collection without any knowledge of the model type

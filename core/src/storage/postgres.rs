@@ -2,15 +2,15 @@ use std::{collections::BTreeMap, sync::Arc};
 
 use crate::{
     error::RetrievalError,
-    model::{RecordInner, ID},
+    model::RecordInner,
     property::{
         backend::{BackendDowncasted, PropertyBackend},
         Backends,
     },
     storage::{RecordState, StorageBucket, StorageEngine},
 };
-
 use ankql::selection::filter::evaluate_predicate;
+use ankurah_proto::ID;
 use async_trait::async_trait;
 use bb8_postgres::{tokio_postgres::NoTls, PostgresConnectionManager};
 use tokio_postgres::{error::SqlState, types::ToSql};

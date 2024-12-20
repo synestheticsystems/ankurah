@@ -1,41 +1,13 @@
+use ankurah_proto::{RecordEvent, RecordState, ID};
 // use futures_signals::signal::Signal;
 
 use std::{fmt, sync::Arc};
 
-use crate::{
-    error::RetrievalError,
-    property::{backend::RecordEvent, Backends},
-    storage::RecordState,
-};
+use crate::{error::RetrievalError, property::Backends};
 
 use anyhow::Result;
 
 use ankql::selection::filter::Filterable;
-use serde::{Deserialize, Serialize};
-use ulid::Ulid;
-
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Ord, PartialOrd, Serialize, Deserialize)]
-pub struct ID(pub Ulid);
-
-impl fmt::Debug for ID {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let humanized = crate::human_id::hex(self.0.to_bytes());
-        f.debug_tuple("ID").field(&humanized).finish()
-    }
-}
-
-impl fmt::Display for ID {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        let humanized = crate::human_id::hex(self.0.to_bytes());
-        f.debug_tuple("ID").field(&humanized).finish()
-    }
-}
-
-impl AsRef<ID> for ID {
-    fn as_ref(&self) -> &ID {
-        self
-    }
-}
 
 /// A model is a struct that represents the present values for a given record
 /// Schema is defined primarily by the Model object, and the Record is derived from that via macro.
@@ -96,7 +68,7 @@ impl RecordInner {
     }
 
     pub fn to_record_state(&self) -> Result<RecordState> {
-        RecordState::from_backends(&self.backends)
+        self.backends.to_state_buffers()
     }
 
     pub fn from_backends(id: ID, bucket_name: &'static str, backends: Backends) -> Self {
@@ -123,7 +95,7 @@ impl RecordInner {
             operations: self.backends.to_operations()?,
         };
 
-        if record_event.is_empty() {
+        if record_event.operations.is_empty() {
             Ok(None)
         } else {
             Ok(Some(record_event))
@@ -185,7 +157,7 @@ pub trait ScopedRecord<'rec> {
         Self: Sized;
 
     fn record_state(&self) -> anyhow::Result<RecordState> {
-        RecordState::from_backends(self.backends())
+        self.record_inner().to_record_state()
     }
 
     fn record_event(&self) -> anyhow::Result<Option<RecordEvent>> {
