@@ -12,8 +12,7 @@ async fn basic_inter_node() -> Result<()> {
     let remote_node = Arc::new(Node::new(Box::new(SledStorageEngine::new_test().unwrap())));
     let local_node = Arc::new(Node::new(Box::new(SledStorageEngine::new_test().unwrap())));
 
-    // this doesn't work yet
-    local_node.local_connect(&remote_node);
+    let _local_connector = LocalConnector::new(local_node, remote_node).unwrap();
 
     {
         let trx = local_node.begin();
